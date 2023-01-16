@@ -12,19 +12,39 @@ const mainController = {
       .catch((error) => console.log(error));
   },
   bookDetail: (req, res) => {
-    // Implement look for details in the database
-    res.render('bookDetail');
-  },
+    db.Book.findByPk(req.params.id, {
+      include: [{ association: 'authors'}]
+    })
+      .then((book) => {
+        res.render('bookDetail', { book });
+  })},
   bookSearch: (req, res) => {
     res.render('search', { books: [] });
   },
   bookSearchResult: (req, res) => {
-    // Implement search by title
-    res.render('search');
+    db.Book.findAll({
+      include: [{ association: 'authors' }],
+      where: {
+        title: {[Op.like]: '%'+ req.body.title +'%'}
+      },
+    }).then((books) => {
+      console.log("Encontre: " + books.title)
+      res.render('home', { books });
+    })
   },
   deleteBook: (req, res) => {
-    // Implement delete book
-    res.render('home');
+    db.Book.destroy({
+      where:{
+        id: req.params.id
+      },
+      include: [{ association: 'authors' }]
+    })
+    db.Book.findAll({
+      include: [{ association: 'authors' }]
+    })
+      .then((books) => {
+        res.render('home', { books });
+      })
   },
   authors: (req, res) => {
     db.Author.findAll()
@@ -34,9 +54,12 @@ const mainController = {
       .catch((error) => console.log(error));
   },
   authorBooks: (req, res) => {
-    // Implement books by author
-    res.render('authorBooks');
-  },
+    db.Author.findByPk(req.params.id, {
+      include: [{ association: 'books' }]
+    })
+      .then((author) => {
+        res.render('authorBooks', { author });
+  })},
   register: (req, res) => {
     res.render('register');
   },
@@ -54,20 +77,52 @@ const mainController = {
       .catch((error) => console.log(error));
   },
   login: (req, res) => {
-    // Implement login process
     res.render('login');
   },
   processLogin: (req, res) => {
-    // Implement login process
-    res.render('home');
-  },
+    processLogin:(req,res)=>{ 
+      console.log(req.body)
+      db.User.findOne({ where:{Email : req.body.email}})
+      .then(user =>{
+          if(user){
+            console.log("Email ya validado")
+              var validPassword = bcryptjs.compareSync(req.body.password, user.Pass)
+              if (validPassword) {
+                  console.log("Contraseña autorizada")
+                  req.session.user = user;
+                  res.redirect('/')
+              }
+              else{
+                console.log("Error en la contraseña, por favor ingrese la contraseña validada")
+                  res.redirect('/users/login')
+              }
+          }else{
+            console.log("El email ingresado no es valida, ingrese un nuevo email")
+              res.redirect('/users/login')
+          }
+      })
+    }
+  },  
+    logout: (req,res) =>{
+      req.session.destroy();
+      res.cookie('Email',null,{maxAge: -1});
+      res.redirect('/')
+    },
   edit: (req, res) => {
-    // Implement edit book
-    res.render('editBook', {id: req.params.id})
+    db.Book.findByPk(req.params.id)
+    .then(book => {res.render('editBook', { book:book })})
   },
   processEdit: (req, res) => {
-    // Implement edit book
-    res.render('home');
+    db.Book.update({
+      title: req.body.title,
+      cover: req.body.cover,
+      description: req.body.description
+    }, {
+      where: {
+        id: req.params.id
+      }
+    })
+    res.redirect('/books/edit/' + req.params.id)
   }
 };
 
