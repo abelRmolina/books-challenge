@@ -11,8 +11,16 @@
     </ul>
 
     <div class="col-md-3 text-end">
-      <a href="/users/login" class="btn btn-outline-primary me-2">Login</a>
-      <a href="/users/register" class="btn btn-outline-primary me-2">Sign-up</a>
+      <% if (locals.userLogin) { %>
+        <a href="/users/User">Bienvenido <%= locals.userLogin.nombre %> </a>
+        <!-- <a href="/users/register" class="btn btn-outline-primary me-2">Log-out</a> -->
+        <form action="/users/logout?_method=DELETE" method="post">
+          <button type="submit"><i class="fas fa-power-off"></i> Cerrar sesion</button>
+      </form>
+        <% } else { %>
+          <a href="/users/login" class="btn btn-outline-primary me-2">Login</a>
+          <a href="/users/register" class="btn btn-outline-primary me-2">Sign-up</a>
+          <% } %>
     </div>
   </header>
 </div>

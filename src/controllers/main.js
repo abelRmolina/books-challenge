@@ -1,5 +1,7 @@
 const bcryptjs = require('bcryptjs');
+const { Sequelize } = require("../database/models");
 const db = require('../database/models');
+const Op = Sequelize.Op;
 
 const mainController = {
   home: (req, res) => {
@@ -33,18 +35,24 @@ const mainController = {
     })
   },
   deleteBook: (req, res) => {
-    db.Book.destroy({
+    db.Book.findOne({
       where:{
         id: req.params.id
       },
       include: [{ association: 'authors' }]
     })
-    db.Book.findAll({
-      include: [{ association: 'authors' }]
-    })
+      .then((books) => {
+        db.Book.destroy({
+          where:{
+            id: req.params.id
+          },
+          include: [{ association: 'authors' }]
+        })
       .then((books) => {
         res.render('home', { books });
-      })
+
+        })
+      }).catch(error => res.status(500).send(error))
   },
   authors: (req, res) => {
     db.Author.findAll()
@@ -60,54 +68,6 @@ const mainController = {
       .then((author) => {
         res.render('authorBooks', { author });
   })},
-  register: (req, res) => {
-    res.render('register');
-  },
-  processRegister: (req, res) => {
-    db.User.create({
-      Name: req.body.name,
-      Email: req.body.email,
-      Country: req.body.country,
-      Pass: bcryptjs.hashSync(req.body.password, 10),
-      CategoryId: req.body.category
-    })
-      .then(() => {
-        res.redirect('/');
-      })
-      .catch((error) => console.log(error));
-  },
-  login: (req, res) => {
-    res.render('login');
-  },
-  processLogin: (req, res) => {
-    processLogin:(req,res)=>{ 
-      console.log(req.body)
-      db.User.findOne({ where:{Email : req.body.email}})
-      .then(user =>{
-          if(user){
-            console.log("Email ya validado")
-              var validPassword = bcryptjs.compareSync(req.body.password, user.Pass)
-              if (validPassword) {
-                  console.log("Contraseña autorizada")
-                  req.session.user = user;
-                  res.redirect('/')
-              }
-              else{
-                console.log("Error en la contraseña, por favor ingrese la contraseña validada")
-                  res.redirect('/users/login')
-              }
-          }else{
-            console.log("El email ingresado no es valida, ingrese un nuevo email")
-              res.redirect('/users/login')
-          }
-      })
-    }
-  },  
-    logout: (req,res) =>{
-      req.session.destroy();
-      res.cookie('Email',null,{maxAge: -1});
-      res.redirect('/')
-    },
   edit: (req, res) => {
     db.Book.findByPk(req.params.id)
     .then(book => {res.render('editBook', { book:book })})
@@ -122,7 +82,10 @@ const mainController = {
         id: req.params.id
       }
     })
-    res.redirect('/books/edit/' + req.params.id)
+    .then(result => {
+      res.redirect('/books/edit/' + req.params.id)
+    })
+    .catch(error => res.status(500).send(error))
   }
 };
 
